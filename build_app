@@ -1,0 +1,5 @@
+#!/bin/bash
+
+docker container rm -f atea_app
+docker build -t atea_app:latest -f app/Dockerfile app/
+docker run --env-file ./app/.app.env --name atea_app --link atea_db:database atea_app:latest
