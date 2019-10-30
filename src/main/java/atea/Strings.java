@@ -7,14 +7,19 @@ final class Strings {
     private final String wordPattern;
     private final String delimiterPattern;
 
-    public Strings() {
+    Strings() {
         String wordCharacterSet = "A-z_";
         wordCharacterPattern = "[" + wordCharacterSet + "]";
         wordPattern = wordCharacterPattern + "+";
         delimiterPattern = "[^" + wordCharacterSet + "]+";
     }
 
-    public String[] getWords(String text) {
+    /**
+     * Gets the words in a string.
+     * @param text  The string to get the words from.
+     * @return      An ordered String[] of words found in text.
+     */
+    String[] getWords(String text) {
         String[] words = text.split(delimiterPattern);
 
         if(words[0].length() == 0) {
@@ -26,10 +31,16 @@ final class Strings {
         return words;
     }
 
-    public String[] getDelimiters(String text) {
+    /**
+     * Gets the delimiters (everything that isn't a word) in a string. Will always create a delimiter at the start and
+     * end of the string, even if the delimiter is an empty string.
+     * @param text  The string to get the delimiters from.
+     * @return      An ordered String[] of delimiters found in text.
+     */
+    String[] getDelimiters(String text) {
         String[] delims = text.split(wordPattern);
 
-        String lastCharacter = text.substring(text.length() - 1, text.length());
+        String lastCharacter = text.substring(text.length() - 1);
         if(lastCharacter.matches(wordCharacterPattern)) {
             // the string ends with a word and the final blank delimiter will be missing
             // add one more blank element to the end of delims
@@ -40,7 +51,13 @@ final class Strings {
         return delims;
     }
 
-    public String[] getFullSplit(String text) {
+    /**
+     * Gets the delimiters (everything that isn't a word) and words in a string. Will always create a delimiter at the
+     * start and end of the string, even if the delimiter is an empty string.
+     * @param text  The string to get the delimiters and words from.
+     * @return      An ordered String[] of delimiters and words found in text.
+     */
+    String[] getFullSplit(String text) {
         String[] words = getWords(text);
         String[] delims = getDelimiters(text);
 

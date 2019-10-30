@@ -7,19 +7,19 @@ final class Abbreviation implements Comparable<Abbreviation>
   private final int index;
   private final ArrayList<Expansion> expansions;
 
-  public Abbreviation(String value, int index, ArrayList<Expansion> expansions) {
+  Abbreviation(String value, int index, ArrayList<Expansion> expansions) {
     this.value = value;
     this.index = index;
     this.expansions = expansions;
   }
 
-  public String getValue() { return this.value; }
+  private String getValue() { return this.value; }
 
-  public int getIndex() { return index; }
+  int getIndex() { return index; }
 
-  public ArrayList<Expansion> getExpansions() { return expansions; }
+  ArrayList<Expansion> getExpansions() { return expansions; }
 
-  // Sorts Abbreviation objects from first occurance (smallest index) to last occurance
+  // Sorts Abbreviation objects from first occurrence (smallest index) to last occurrence
   @Override
   public int compareTo(Abbreviation a) {
     return this.index - a.index;
@@ -31,28 +31,28 @@ final class Abbreviation implements Comparable<Abbreviation>
       return true;
     }
 
-    Abbreviation a = (Abbreviation) obj;
-
-    if(a.getValue().equals(value) && a.getIndex() == index && a.getExpansions().equals(expansions)) {
-      return true;
+    if (!(obj instanceof Abbreviation)) {
+      return false;
     }
 
-    return false;
+    Abbreviation a = (Abbreviation) obj;
+
+    return a.getValue().equals(value) && a.getIndex() == index && a.getExpansions().equals(expansions);
   }
 
   @Override
   public String toString() {
-    String output = "[value:" + this.value;
-    output += ", index:" + this.index;
-    output += ", expansions:[";
+    StringBuilder output = new StringBuilder("[value:" + this.value);
+    output.append(", index:").append(this.index);
+    output.append(", expansions:[");
     for(int i=0; i<expansions.size(); i++) {
       if(i > 0) {
-        output += ", ";
+        output.append(", ");
       }
-      output += this.expansions.get(i);
+      output.append(this.expansions.get(i));
     }
-    output += "]]";
+    output.append("]]");
 
-    return output;
+    return output.toString();
   }
 }

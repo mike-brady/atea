@@ -17,13 +17,13 @@ final class Expansion implements Comparable<Expansion>
     this.confidence = confidence;
   }
 
-  public void setConfidence(float confidence) { this.confidence = confidence; }
+  void setConfidence(float confidence) { this.confidence = confidence; }
 
-  public int getId() { return id; }
+  int getId() { return id; }
 
-  public String getValue() { return value; }
+  String getValue() { return value; }
 
-  public float getConfidence() { return confidence; }
+  float getConfidence() { return confidence; }
 
   // Sorts Expansion objects from greatest confidence to least confident
   @Override
@@ -43,13 +43,13 @@ final class Expansion implements Comparable<Expansion>
       return true;
     }
 
-    Expansion e = (Expansion) obj;
-
-    if(e.getId() == id && e.getValue().equals(value) && e.getConfidence() == confidence) {
-      return true;
+    if (!(obj instanceof Expansion)) {
+      return false;
     }
 
-    return false;
+    Expansion e = (Expansion) obj;
+
+    return e.getId() == id && e.getValue().equals(value) && e.getConfidence() == confidence;
   }
 
   @Override

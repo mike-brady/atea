@@ -1,10 +1,3 @@
-/**
- * Atea - Abbreviated Text Expansion Algorithm
- *
- * Atea takes a String of text and finds all abbreviations used in the text. It determines all the
- * possible expansions of each abbreviation and assigns a confidence level to each expansion based
- * on how well the expansion fits the context of how the abbreviation was used in the text.
- */
 package atea;
 
 import java.sql.*;
@@ -12,6 +5,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Arrays;
 
+/**
+ * Atea - Abbreviated Text Expansion Algorithm
+ *
+ * Atea takes a String of text and finds all abbreviations used in the text. It determines all the
+ * possible expansions of each abbreviation and assigns a confidence level to each expansion based
+ * on the context of how the abbreviation was used in the text.
+ */
 public final class Atea {
 
   private final Database db;
@@ -21,15 +21,13 @@ public final class Atea {
   }
 
   /**
-   * Step through every word in the text and get determine if it is an abbreviation by looking for
-   * possible expansions. If no possible expansions are found, it must not be an abbreviation.
+   * Find abbreviations used in the text. Get each abbreviations possible expansions and the confidence level for each
+   * possible expansion.
    * @param  text The text to look for abbreviations in.
-   * @return      An array of Abbreviation objects sorted from first occurance to last in the text
-   *              The Abbreviation objects will have their possible expansions and the confidence
-   *              of each expansion set.
+   * @return      Abbreviation objects sorted from first occurrence to last in the text
    */
   public ArrayList<Abbreviation> getAbbreviations(String text) {
-    ArrayList<Abbreviation> abbrs = new ArrayList<Abbreviation>();
+    ArrayList<Abbreviation> abbrs = new ArrayList<>();
 
     Strings S = new Strings();
     String[] words = S.getWords(text);
@@ -48,73 +46,94 @@ public final class Atea {
   }
 
   /**
-   * expand returns
-   * @param  text [description]
-   * @return      [description]
+   * Returns the text with the most likely expansion for each abbreviation substituted for the abbreviation.
+   * @param  text The text to look for abbreviations in.
+   * @return      The expanded text.
    */
   public String expand(String text) {
-    String output = "";
-    Abbreviation abbr;
-
     ArrayList<Abbreviation> abbrs = getAbbreviations(text);
-    int[] abbr_indexes = getIndexes(abbrs);
     Strings S = new Strings();
     String[] chunks = S.getFullSplit(text);
 
-    int word_index = 0;
-    for(int i=0, a=0; i<chunks.length; i++) {
-      // delimeter
-      output += chunks[i++];
-
-      if(i >= chunks.length) {
-        break;
-      }
-
-      // if word is an abbreviation
-      int k = word_index;
-      if(Arrays.stream(abbr_indexes).anyMatch(j -> j == k)) {
-        output += abbrs.get(a++).getExpansions().get(0).getValue();
-      } else {
-        output += chunks[i];
-      }
-      word_index++;
-    }
-
-    return output;
+    return buildString(chunks, abbrs);
   }
 
-  public String explain(String text) {
-    String output = "";
-    Abbreviation abbr;
-
+  /**
+   * Returns the text with the most likely expansion for each abbreviation put in parenthesis next to the abbreviation.
+   * @param  text The text to look for abbreviations in.
+   * @return      The explained text.
+   */
+  String explain(String text) {
     ArrayList<Abbreviation> abbrs = getAbbreviations(text);
-    int[] abbr_indexes = getIndexes(abbrs);
     Strings S = new Strings();
     String[] chunks = S.getFullSplit(text);
 
+    return buildString(chunks, abbrs, true);
+  }
+
+  /**
+   * Returns buildString(String[] chunks, ArrayList<Abbreviation> abbrs, boolean explain)
+   * passing false for the explain parameter.
+   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word, delimiter, word, ...)
+   *                Expects the array to always start with and end with a delimiter.
+   * @param abbrs   The Abbreviation objects found in the String[] chunks.
+   * @return        The built string.
+   */
+  private String buildString(String[] chunks, ArrayList<Abbreviation> abbrs) {
+    return buildString(chunks, abbrs, false);
+  }
+
+  /**
+   * Builds a String from a String[]. Expects every even element to be a delimiter and every odd element to be a word.
+   * Abbreviations passed in the ArrayList should have their index property set to correspond with their index in the
+   * set of only words. Given String[] chunks = {"", "An", " ", "abbr", " ", "example", "."}, the Abbreviation abbr has
+   * the index 3 in chunks, however in the set of only words ( {"An", "abbr"} ), abbr has the index 1.
+   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word, delimiter, word, ...)
+   *                Expects the array to always start with and end with a delimiter.
+   * @param abbrs   The Abbreviation objects found in the String[] chunks.
+   * @param explain On true, will output the expansion of the abbreviation in parenthesis next to the abbreviation.
+   *                On false, will substitute the expansion for the abbreviation.
+   * @return        The built string.
+   */
+  private String buildString(String[] chunks, ArrayList<Abbreviation> abbrs, boolean explain) {
+    StringBuilder output = new StringBuilder();
+
+    int[] abbr_indexes = getIndexes(abbrs);
+
     int word_index = 0;
     for(int i=0, a=0; i<chunks.length; i++) {
-      // delimeter
-      output += chunks[i++];
+      // delimiter
+      output.append(chunks[i++]);
 
       if(i >= chunks.length) {
         break;
       }
 
       // word
-      output += chunks[i];
-
-      // if word is an abbreviation
       int k = word_index;
+      // if word is an abbreviation
       if(Arrays.stream(abbr_indexes).anyMatch(j -> j == k)) {
-        output += " (" + abbrs.get(a++).getExpansions().get(0).getValue() + ")";
+        if(explain) {
+          output.append(chunks[i]);
+          output.append(" (").append(abbrs.get(a++).getExpansions().get(0).getValue()).append(")");
+        } else {
+          output.append(abbrs.get(a++).getExpansions().get(0).getValue());
+        }
+      } else {
+        output.append(chunks[i]);
       }
+
       word_index++;
     }
 
-    return output;
+    return output.toString();
   }
 
+  /**
+   * Gets an array of the index properties of each Abbreviation object.
+   * @param abbrs The Abbreviation objects to get the indexes of.
+   * @return      An array of the indexes of each Abbreviation object.
+   */
   private int[] getIndexes(ArrayList<Abbreviation> abbrs) {
     int[] indexes = new int[abbrs.size()];
 
@@ -126,41 +145,31 @@ public final class Atea {
   }
 
   /**
-   * Determines if the string of characters starting at a provided index, of a provided length in
-   * the provided text is an abbreviation in Atea's dictionary AND if it's usage in the text
-   * indicates it is an abbreviation rather than a word.
-   *
-   * Example: "am" could be an abbreviation for "ante meridiem" (before noon) as in "9:30 am".
-   * Or, it could be the word "am" as in "I am having a good day today".
-   * @param  index    The index in the text at which the potential abbreviation starts
-   * @param  length   The length of the potential abbreviation
-   * @param  text     The text in which the potential abbreviation is found
-   * @return          the id of the abbreviation if the potential abbreviation is found in the
-   *                  database AND the confidence level is >= .95, otherwise -1
+   * Returns predictExpansions(String[] text, int index, double threshold) passing .95 for the threshold parameter.
+   * @param text      An ordered array of Strings of words.
+   * @param index     The index of the word to look for check if it is an abbreviation and to look for expansions of.
+   * @return          An ArrayList of Expansion objects. Will be an empty list if the word at index is not an
+   *                  abbreviation or none of the possible expansions met the confidence threshold given the context of
+   *                  words surrounding the abbreviation.
    */
-  public ArrayList<Expansion> predictExpansions(String[] text, int abbr_index) {
-    return predictExpansions(text, abbr_index, .95);
+  public ArrayList<Expansion> predictExpansions(String[] text, int index) {
+    return predictExpansions(text, index, .95);
   }
 
   /**
-   * Determines if the string of characters starting at a provided index, of a provided length in
-   * the provided text is an abbreviation in Atea's dictionary AND if it's usage in the text
-   * indicates it is an abbreviation rather than a word.
-   *
-   * Example: "am" could be an abbreviation for "ante meridiem" (before noon) as in "9:30 am".
-   * Or, it could be the word "am" as in "I am having a good day".
-   * @param  index     The index in the text at which the potential abbreviation starts
-   * @param  length    The length of the potential abbreviation
-   * @param  text      The text in which the potential abbreviation is found
-   * @param  threshold A value between 0 and 1 inclusive of the minimum confidence level to return
-   *                   true on a potential abbreviation
-   * @return           the id of the abbreviation if the potential abbreviation is found in the
-   *                   database AND the confidence level is >= the provided threshold value,
-   *                   otherwise -1
+   * Determines if the word at the specified index of text is an abbreviation and what it's possible expansions are
+   * given the context of words surrounding the word in question. Only accepts possible expansions with a confidence
+   * score >= the provided threshold.
+   * @param text      An ordered array of Strings of words.
+   * @param index     The index of the word to look for check if it is an abbreviation and to look for expansions of.
+   * @param threshold The minimum confidence level of which to accept a possible expansion.
+   * @return          An ArrayList of Expansion objects. Will be an empty list if the word at index is not an
+   *                  abbreviation or none of the possible expansions met the confidence threshold given the context of
+   *                  words surrounding the abbreviation.
    */
-  public ArrayList<Expansion> predictExpansions(String[] text, int abbr_index, double threshold) {
-    ArrayList<Expansion> expansions = new ArrayList<Expansion>();
-    String abbr = text[abbr_index];
+  public ArrayList<Expansion> predictExpansions(String[] text, int index, double threshold) {
+    ArrayList<Expansion> expansions = new ArrayList<>();
+    String abbr = text[index];
 
     int id = db.abbreviationExists(abbr);
     if(id != -1) {
@@ -168,7 +177,7 @@ public final class Atea {
       ArrayList<Expansion> possibleExpansions = db.getExpansions(id);
 
       for( Expansion expansion: possibleExpansions) {
-          confidence = expansionConfidence(text, abbr_index, expansion.getId());
+          confidence = expansionConfidence(text, index, expansion.getId());
           if(confidence >= threshold) {
               expansion.setConfidence(confidence);
               expansions.add( expansion );
@@ -180,6 +189,14 @@ public final class Atea {
     return expansions;
   }
 
+  /**
+   * Determines how likely it is that this expansion is what the abbreviation is meant to stand for. Looks at words on
+   * either side of the abbreviation to determine the possibility of the expansion being intended.
+   * @param text          An ordered array of Strings of words.
+   * @param abbr_index    The index of the abbreviation in text.
+   * @param expansion_id  The id of the expansion that is being checked.
+   * @return              An confidence score from 0.0 to 1.0, 0 being least confident, 1 being most confident
+   */
   private float expansionConfidence(String[] text, int abbr_index, int expansion_id) {
     // How far left and right from the abbr_index to look at the context of its use
     int context_size = 4;
@@ -190,13 +207,12 @@ public final class Atea {
     int abbr_context_index = abbr_index - start_index;
     String[] context = Arrays.copyOfRange(text, start_index, end_index + 1);
 
-
-    float[] contextMatchScore = new float[end_index - start_index];
-    float total = 0;
+    float totalContextScore = 0;
+    int totalScores = 0;
 
     float p;
     // for every word surrounding the abbreviation
-    for(int i=0, j=0; i<context.length; i++) {
+    for(int i=0; i<context.length; i++) {
       if(i == abbr_context_index) {
         continue;
       }
@@ -204,16 +220,24 @@ public final class Atea {
       int word_id = db.wordExistsForExpansion(context[i], expansion_id);
       if(word_id != -1) {
         p = contextMatchAt(context, abbr_context_index, expansion_id, word_id, i);
-        contextMatchScore[j++] = p;
-        total += p;
+        totalContextScore += p;
+        totalScores++;
       }
     }
 
-    float averageContextMatchScore = total / contextMatchScore.length;
-
-    return averageContextMatchScore;
+    return totalContextScore / totalScores;
   }
 
+  /**
+   * Determines the likelihood that a word would appear at its current position relative to the abbreviation
+   * when the abbreviation is being used to stand for the given expansion.
+   * @param context       An ordered array of Strings of words surrounding and including the abbreviation.
+   * @param abbr_index    The index of the abbreviation in text.
+   * @param expansion_id  The id of the expansion that word is being checked against.
+   * @param word_id       The id of the word that is being checked.
+   * @param index         The index of the word in text.
+   * @return              A context match score from 0.0 to 1.0, 0 being no match, 1 being complete match.
+   */
   private float contextMatchAt(String[] context, int abbr_index, int expansion_id, int word_id, int index) {
 
     // Only look on the left or right side of the abbr
@@ -231,7 +255,7 @@ public final class Atea {
       int distance = i - abbr_index;
       probability = probabilityAt(expansion_id, distance, word_id);
 
-      // Do not penalize the conext match score if the word is not found in the sorrounding columns
+      // Do not penalize the context match score if the word is not found in the surrounding columns
       if(probability == 0 && i != index) {
         continue;
       }
@@ -243,6 +267,13 @@ public final class Atea {
     return total_score / total_possible_score;
   }
 
+  /**
+   * Calculates the probability that the given word would appear the the given distance for an expansion
+   * @param expansion_id  The id of the word that is being checked.
+   * @param distance      The distance of the word that is being checked.
+   * @param word_id       The id of the word that is being checked.
+   * @return              A probability value from 0.0 to 1.0
+   */
   private float probabilityAt(int expansion_id, int distance, int word_id) {
     int occurrences = db.countWordOccurrencesAtDistance(expansion_id, distance, word_id);
     int total = db.countAllOccurrencesAtDistance(expansion_id, distance);
