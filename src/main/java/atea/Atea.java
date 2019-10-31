@@ -16,8 +16,11 @@ public final class Atea {
 
   private final Database db;
 
-  public Atea(Connection conn) {
-      this.db = new Database(conn);
+  /**
+   * @param db_credentials    {"host", "username", "password"}
+   */
+  public Atea(String[] db_credentials) throws SQLException {
+    this.db = new Database(db_credentials);
   }
 
   /**
@@ -43,6 +46,28 @@ public final class Atea {
 
     Collections.sort(abbrs);
     return abbrs;
+  }
+
+  /**
+   * Adds an example of an abbreviation being used to the database.
+   * @param context       An ordered array of words from a sentence where an abbreviation is used.
+   * @param abbr_index    The index in context where the abbreviation is.
+   * @param expansion_id  The id of the expansion for this abbreviation.
+   * @return              True on success, false on failure.
+   */
+  public boolean addAbbreviationExample(String[] context, int abbr_index, int expansion_id) {
+    return db.insertAbbreviationExample(context, abbr_index, expansion_id);
+  }
+
+  /**
+   * Adds an example of an abbreviation being used to the database.
+   * @param context       An ordered array of words from a sentence where an abbreviation is used.
+   * @param abbr_index    The index in context where the abbreviation is.
+   * @param expansion     The expansion for this abbreviation.
+   * @return              True on success, false on failure.
+   */
+  public boolean addAbbreviationExample(String[] context, int abbr_index, String expansion) {
+    return db.insertAbbreviationExample(context, abbr_index, expansion);
   }
 
   /**

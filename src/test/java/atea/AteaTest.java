@@ -1,9 +1,6 @@
 package atea;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -19,18 +16,19 @@ class AteaTest {
     private Atea A;
     private String input;
     private String[] input_array;
+    private int[] abbr_indexes;
     private String expected_expand;
     private String expected_explain;
 
     @BeforeEach
     void init() {
         try {
-            Connection conn = DriverManager.getConnection(
-                    "jdbc:mysql://" + System.getProperty("db.host") + ":3306/atea",
+            String[] db_credentials = {
+                    System.getProperty("db.host"),
                     System.getProperty("db.username"),
                     System.getProperty("db.password")
-            );
-            A = new Atea(conn);
+            };
+            A = new Atea(db_credentials);
         } catch(SQLException ex) {
             ex.printStackTrace();
             fail("Could not connect to database;");
@@ -38,6 +36,7 @@ class AteaTest {
 
         input = "An abbr is a shortened form of a word. DIY and misc are examples of abbreviations.";
         input_array = new String[]{"An", "abbr", "is", "a", "shortened", "form", "of", "a", "word.", "DIY", "and", "misc", "are", "examples", "of", "abbreviations."};
+        abbr_indexes = new int[]{1, 9, 11};
         expected_expand = "An abbreviation is a shortened form of a word. do it yourself and miscellaneous are examples of abbreviations.";
         expected_explain = "An abbr (abbreviation) is a shortened form of a word. DIY (do it yourself) and misc (miscellaneous) are examples of abbreviations.";
     }
@@ -48,15 +47,15 @@ class AteaTest {
         ArrayList<Abbreviation> expected = new ArrayList<Abbreviation>();
         ArrayList<Expansion> expansions = new ArrayList<Expansion>();
         expansions.add(new Expansion(1, "abbreviation", 1));
-        expected.add(new Abbreviation("abbr",1, expansions));
+        expected.add(new Abbreviation("abbr", abbr_indexes[0], expansions));
 
         expansions = new ArrayList<Expansion>();
         expansions.add(new Expansion(2, "do it yourself", 1));
-        expected.add(new Abbreviation("DIY",9, expansions));
+        expected.add(new Abbreviation("DIY", abbr_indexes[1], expansions));
 
         expansions = new ArrayList<Expansion>();
         expansions.add(new Expansion(3, "miscellaneous", 1));
-        expected.add(new Abbreviation("misc",11, expansions));
+        expected.add(new Abbreviation("misc", abbr_indexes[2], expansions));
 
         assertEquals(expected, A.getAbbreviations(input));
     }
@@ -80,5 +79,20 @@ class AteaTest {
         expected.add(new Expansion(1, "abbreviation", 1));
         Strings S = new Strings();
         assertEquals(expected, A.predictExpansions(input_array, 1));
+    }
+
+    @Nested
+    @DisplayName("addAbbreviationExample method should add to the context table in the database")
+    class addAbbreviationExampleTest {
+        @Test
+        void addAbbreviationExample () {
+            assertEquals(A.addAbbreviationExample(input_array, abbr_indexes[0], 1), true);
+        }
+
+        @Test
+        @DisplayName("and should create a new expansion entry in the database")
+        void testAddAbbreviationExample () {
+            assertEquals(A.addAbbreviationExample(input_array, abbr_indexes[0], "abbreviation"), true);
+        }
     }
 }
