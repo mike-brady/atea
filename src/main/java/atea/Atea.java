@@ -15,6 +15,7 @@ import java.util.Arrays;
 public final class Atea {
 
   private final Database db;
+  private int context_width = 8;
 
   /**
    * @param db_credentials    {"host", "username", "password"}
@@ -23,25 +24,39 @@ public final class Atea {
     this.db = new Database(db_credentials);
   }
 
+  public ArrayList<Abbreviation> getAbbreviations(String text) {
+    return getAbbreviations(text, true);
+  }
+
   /**
    * Find abbreviations used in the text. Get each abbreviations possible expansions and the confidence level for each
    * possible expansion.
    * @param  text The text to look for abbreviations in.
    * @return      Abbreviation objects sorted from first occurrence to last in the text
    */
-  public ArrayList<Abbreviation> getAbbreviations(String text) {
+  public ArrayList<Abbreviation> getAbbreviations(String text, boolean predict) {
     ArrayList<Abbreviation> abbrs = new ArrayList<>();
 
-    Strings S = new Strings();
-    String[] words = S.getWords(text);
+    String[] words = StringSplitter.getWords(text);
+    String[] delims = StringSplitter.getDelimiters(text);
 
     for(int i=0; i<words.length; i++) {
-      ArrayList<Expansion> expansions = predictExpansions(words, i);
+      Context context = StringSplitter.getContext(words, delims, i, context_width);
+      Abbreviation abbr = new Abbreviation(words[i], i, context);
+      if(predict) {
+        ArrayList<Expansion> expansions = predictExpansions(abbr);
 
-      // If expansions are found this word is believed to be an abbreviation
-      if(expansions.size() > 0) {
-        abbrs.add( new Abbreviation(words[i], i, expansions) );
+        // If expansions are found this word is believed to be an abbreviation
+        if(expansions.size() > 0) {
+          abbr.setExpansions(expansions);
+          abbrs.add( abbr );
+        }
+      } else {
+        if(db.abbreviationExists(words[i]) != -1) {
+          abbrs.add( abbr );
+        }
       }
+
     }
 
     Collections.sort(abbrs);
@@ -77,8 +92,7 @@ public final class Atea {
    */
   public String expand(String text) {
     ArrayList<Abbreviation> abbrs = getAbbreviations(text);
-    Strings S = new Strings();
-    String[] chunks = S.getFullSplit(text);
+    String[] chunks = StringSplitter.getFullSplit(text);
 
     return buildString(chunks, abbrs);
   }
@@ -90,8 +104,7 @@ public final class Atea {
    */
   String explain(String text) {
     ArrayList<Abbreviation> abbrs = getAbbreviations(text);
-    Strings S = new Strings();
-    String[] chunks = S.getFullSplit(text);
+    String[] chunks = StringSplitter.getFullSplit(text);
 
     return buildString(chunks, abbrs, true);
   }
@@ -171,42 +184,58 @@ public final class Atea {
 
   /**
    * Returns predictExpansions(String[] text, int index, double threshold) passing .95 for the threshold parameter.
-   * @param text      An ordered array of Strings of words.
-   * @param index     The index of the word to look for check if it is an abbreviation and to look for expansions of.
    * @return          An ArrayList of Expansion objects. Will be an empty list if the word at index is not an
    *                  abbreviation or none of the possible expansions met the confidence threshold given the context of
    *                  words surrounding the abbreviation.
    */
-  public ArrayList<Expansion> predictExpansions(String[] text, int index) {
-    return predictExpansions(text, index, .95);
+  public ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
+    return predictExpansions(abbr, .95);
   }
 
   /**
    * Determines if the word at the specified index of text is an abbreviation and what it's possible expansions are
    * given the context of words surrounding the word in question. Only accepts possible expansions with a confidence
    * score >= the provided threshold.
-   * @param text      An ordered array of Strings of words.
-   * @param index     The index of the word to look for check if it is an abbreviation and to look for expansions of.
    * @param threshold The minimum confidence level of which to accept a possible expansion.
    * @return          An ArrayList of Expansion objects. Will be an empty list if the word at index is not an
    *                  abbreviation or none of the possible expansions met the confidence threshold given the context of
    *                  words surrounding the abbreviation.
    */
-  public ArrayList<Expansion> predictExpansions(String[] text, int index, double threshold) {
+  public ArrayList<Expansion> predictExpansions(Abbreviation abbr, double threshold) {
     ArrayList<Expansion> expansions = new ArrayList<>();
-    String abbr = text[index];
 
-    int id = db.abbreviationExists(abbr);
+    int id = db.abbreviationExists(abbr.getValue());
     if(id != -1) {
+      boolean is_always_abbreviation = db.isAlwaysAbbreviation(id);
       float confidence;
       ArrayList<Expansion> possibleExpansions = db.getExpansions(id);
+      float total_confidence_score = 0;
+      for(Expansion expansion: possibleExpansions) {
+        confidence = expansionConfidence(abbr, expansion.getId());
 
-      for( Expansion expansion: possibleExpansions) {
-          confidence = expansionConfidence(text, index, expansion.getId());
-          if(confidence >= threshold) {
-              expansion.setConfidence(confidence);
-              expansions.add( expansion );
+        total_confidence_score += confidence;
+        if(is_always_abbreviation || confidence >= threshold) {
+          expansion.setConfidence(confidence);
+          expansions.add( expansion );
+        }
+      }
+
+      // adjust confidence scores relative to each other
+      if(is_always_abbreviation) {
+
+        // if we have 0 confidence for all expansions, distribute the confidence equally
+        if(total_confidence_score == 0) {
+          total_confidence_score = expansions.size();
+          for(Expansion expansion: expansions) {
+            expansion.setConfidence(1 / total_confidence_score);
           }
+        }
+
+        else {
+          for (Expansion expansion : expansions) {
+            expansion.setConfidence(expansion.getConfidence() / total_confidence_score);
+          }
+        }
       }
       Collections.sort(expansions);
     }
@@ -217,37 +246,34 @@ public final class Atea {
   /**
    * Determines how likely it is that this expansion is what the abbreviation is meant to stand for. Looks at words on
    * either side of the abbreviation to determine the possibility of the expansion being intended.
-   * @param text          An ordered array of Strings of words.
-   * @param abbr_index    The index of the abbreviation in text.
    * @param expansion_id  The id of the expansion that is being checked.
    * @return              An confidence score from 0.0 to 1.0, 0 being least confident, 1 being most confident
    */
-  private float expansionConfidence(String[] text, int abbr_index, int expansion_id) {
-    // How far left and right from the abbr_index to look at the context of its use
-    int context_size = 4;
-
-    // Limit the start and end of the context around the abbr to not go out of bounds of text
-    int start_index = Math.max(0, abbr_index - context_size);
-    int end_index = Math.min(text.length - 1, abbr_index + context_size);
-    int abbr_context_index = abbr_index - start_index;
-    String[] context = Arrays.copyOfRange(text, start_index, end_index + 1);
+  private float expansionConfidence(Abbreviation abbr, int expansion_id) {
+    Context context = abbr.getContext();
+    String[] words = context.getWords();
+    int abbr_context_index = context.getWord_index();
 
     float totalContextScore = 0;
     int totalScores = 0;
 
     float p;
     // for every word surrounding the abbreviation
-    for(int i=0; i<context.length; i++) {
+    for(int i=0; i<words.length; i++) {
       if(i == abbr_context_index) {
         continue;
       }
 
-      int word_id = db.wordExistsForExpansion(context[i], expansion_id);
+      int word_id = db.wordExistsForExpansion(context.getWords()[i], expansion_id);
       if(word_id != -1) {
-        p = contextMatchAt(context, abbr_context_index, expansion_id, word_id, i);
+        p = contextMatchAt(context, expansion_id, word_id, i);
         totalContextScore += p;
         totalScores++;
       }
+    }
+
+    if(totalScores == 0) {
+      return 0;
     }
 
     return totalContextScore / totalScores;
@@ -257,23 +283,24 @@ public final class Atea {
    * Determines the likelihood that a word would appear at its current position relative to the abbreviation
    * when the abbreviation is being used to stand for the given expansion.
    * @param context       An ordered array of Strings of words surrounding and including the abbreviation.
-   * @param abbr_index    The index of the abbreviation in text.
    * @param expansion_id  The id of the expansion that word is being checked against.
    * @param word_id       The id of the word that is being checked.
    * @param index         The index of the word in text.
    * @return              A context match score from 0.0 to 1.0, 0 being no match, 1 being complete match.
    */
-  private float contextMatchAt(String[] context, int abbr_index, int expansion_id, int word_id, int index) {
+  private float contextMatchAt(Context context, int expansion_id, int word_id, int index) {
 
     // Only look on the left or right side of the abbr
+    int abbr_index = context.getWord_index();
+    String[] words = context.getWords();
     int start = 0;
     int end = abbr_index;
     if(index > abbr_index) {
       start = abbr_index + 1;
-      end = context.length;
+      end = words.length;
     }
 
-    float total_score = 0;
+    float probability_sum = 0;
     float total_possible_score = 0;
     float probability;
     for(int i=start; i<end; i++) {
@@ -285,11 +312,12 @@ public final class Atea {
         continue;
       }
 
-      total_score += probability / (Math.abs(distance) + 1);
-      total_possible_score += 1.0 / (Math.abs(distance) + 1);
+      float weight = 1f / (Math.abs(distance) + 1);
+      probability_sum += probability * weight;
+      total_possible_score += weight;
     }
 
-    return total_score / total_possible_score;
+    return probability_sum / total_possible_score;
   }
 
   /**

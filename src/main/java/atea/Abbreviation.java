@@ -1,23 +1,38 @@
 package atea;
 import java.util.ArrayList;
 
-final class Abbreviation implements Comparable<Abbreviation>
+public final class Abbreviation implements Comparable<Abbreviation>
 {
   private final String value;
   private final int index;
-  private final ArrayList<Expansion> expansions;
+  private final Context context;
+  private ArrayList<Expansion> expansions;
 
-  Abbreviation(String value, int index, ArrayList<Expansion> expansions) {
+  Abbreviation(String value, int index, Context context) {
     this.value = value;
     this.index = index;
+    this.context = context;
+    this.expansions = new ArrayList<Expansion>();
+  }
+
+  Abbreviation(String value, int index, Context context, ArrayList<Expansion> expansions) {
+    this.value = value;
+    this.index = index;
+    this.context = context;
     this.expansions = expansions;
   }
 
-  private String getValue() { return this.value; }
+  public String getValue() { return this.value; }
 
-  int getIndex() { return index; }
+  public int getIndex() { return index; }
 
-  ArrayList<Expansion> getExpansions() { return expansions; }
+  public Context getContext() { return context; }
+
+  public ArrayList<Expansion> getExpansions() { return expansions; }
+
+  public void setExpansions(ArrayList<Expansion> expansions) {
+    this.expansions = expansions;
+  }
 
   // Sorts Abbreviation objects from first occurrence (smallest index) to last occurrence
   @Override

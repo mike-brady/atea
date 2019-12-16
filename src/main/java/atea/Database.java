@@ -28,7 +28,7 @@ final class Database {
         return DriverManager.getConnection("jdbc:mysql://" + host + ":3306/atea", username, password);
     }
 
-    private void close(Connection conn, Boolean commit) throws SQLException {
+    private void close(Connection conn, boolean commit) throws SQLException {
         if(commit) {
             conn.commit();
         } else {
@@ -81,6 +81,25 @@ final class Database {
 
         return exists;
 
+    }
+
+    boolean isAlwaysAbbreviation(int id) {
+        boolean always = false;
+
+        try {
+            Connection conn = connect();
+
+            String query = "SELECT id FROM abbreviations WHERE id=? AND is_always_abbreviation=1";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setInt(1, id);
+            always = stmt.execute();
+
+            conn.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        return always;
     }
 
     private boolean expansionExists(int id, Connection conn) {

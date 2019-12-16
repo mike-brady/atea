@@ -2,27 +2,22 @@ package atea;
 
 import java.util.Arrays;
 
-final class Strings {
-    private final String wordCharacterPattern;
-    private final String wordPattern;
-    private final String delimiterPattern;
+public final class StringSplitter {
+    private static final String wordCharacterSet = "A-z_'";
+    private static final String wordCharacterPattern = "[" + wordCharacterSet + "]";
+    private static final String wordPattern = wordCharacterPattern + "+";
+    private static final String delimiterPattern = "[^" + wordCharacterSet + "]+";
 
-    Strings() {
-        String wordCharacterSet = "A-z_";
-        wordCharacterPattern = "[" + wordCharacterSet + "]";
-        wordPattern = wordCharacterPattern + "+";
-        delimiterPattern = "[^" + wordCharacterSet + "]+";
-    }
 
     /**
      * Gets the words in a string.
      * @param text  The string to get the words from.
      * @return      An ordered String[] of words found in text.
      */
-    String[] getWords(String text) {
+    public static String[] getWords(String text) {
         String[] words = text.split(delimiterPattern);
 
-        if(words[0].length() == 0) {
+        if(words.length > 0 && words[0].length() == 0) {
             // the string starts with a delimiter and the first element in words will be blank
             // remove that first blank element
             words = Arrays.copyOfRange(words, 1, words.length);
@@ -37,7 +32,7 @@ final class Strings {
      * @param text  The string to get the delimiters from.
      * @return      An ordered String[] of delimiters found in text.
      */
-    String[] getDelimiters(String text) {
+    public static String[] getDelimiters(String text) {
         String[] delims = text.split(wordPattern);
 
         String lastCharacter = text.substring(text.length() - 1);
@@ -57,18 +52,45 @@ final class Strings {
      * @param text  The string to get the delimiters and words from.
      * @return      An ordered String[] of delimiters and words found in text.
      */
-    String[] getFullSplit(String text) {
+    public static String[] getFullSplit(String text) {
         String[] words = getWords(text);
         String[] delims = getDelimiters(text);
 
-        String[] mixed = new String[delims.length + words.length];
+        return combine(words, delims);
+    }
+
+    public static String[] combine(String[] words, String[] delimiters) {
+        String[] mixed = new String[delimiters.length + words.length];
         int j=0;
         for(int i=0; i<words.length; i++) {
-            mixed[j++] = delims[i];
+            mixed[j++] = delimiters[i];
             mixed[j++] = words[i];
         }
-        mixed[j] = delims[delims.length - 1];
+        mixed[j] = delimiters[delimiters.length - 1];
 
         return mixed;
+    }
+
+    public static String compose(String[] words, String[] delimiters) {
+        return compose(combine(words, delimiters));
+    }
+
+    public static String compose(String[] mixed) {
+        StringBuilder output = new StringBuilder();
+        for(String item : mixed) {
+            output.append(item);
+        }
+        return output.toString();
+    }
+
+    public static Context getContext(String[] words, String[] delimiters, int word_index, int context_width) {
+        // Limit the start and end of the context around the abbr to not go out of bounds of text
+        int start_index = Math.max(0, word_index - context_width);
+        int end_index = Math.min(words.length - 1, word_index + context_width);
+        int word_context_index = word_index - start_index;
+        String[] context_words = Arrays.copyOfRange(words, start_index, end_index + 1);
+        String[] context_delims = Arrays.copyOfRange(delimiters, start_index, end_index + 2);
+
+        return new Context(context_words, context_delims, word_context_index);
     }
 }

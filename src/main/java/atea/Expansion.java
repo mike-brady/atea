@@ -1,6 +1,6 @@
 package atea;
 
-final class Expansion implements Comparable<Expansion>
+public final class Expansion implements Comparable<Expansion>
 {
   private final int id;
   private final String value;
@@ -21,9 +21,9 @@ final class Expansion implements Comparable<Expansion>
 
   int getId() { return id; }
 
-  String getValue() { return value; }
+  public String getValue() { return value; }
 
-  float getConfidence() { return confidence; }
+  public float getConfidence() { return confidence; }
 
   // Sorts Expansion objects from greatest confidence to least confident
   @Override
