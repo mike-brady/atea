@@ -4,10 +4,28 @@ ATEA stands for Abbreviated Text Expansion Algorithm. ATEA parses text, finds wh
 
 ## Set Up
 
-[Setup database steps here]
+### Create the MySQL database
+
+#### Docker
+
+1. Make a copy [.db.env.template](db/.db.env.template) and name it ".db.env"
+2. Fill out .db.env with a root passsord, username, and user password.  
+3. Build and run the Dockerfile.  
+`docker build . -t atea_db`  
+`docker run --env-file .db.env --name atea_db -p 3306:3306 -d atea_db:latest`
+
+#### Manually
+
+1. Run [build.sql](db/build.sql) in MySQL
+2. Create a user with SELECT and INSERT permissions on the database "atea"
+
+### Give ATEA your database credentials
+
+1. Make a copy [db.properties.template](atea/target/classes/db.properties.template) and name it ".db.properties"
+2. Fill out db.properties with the hostname, username, and user password for the database.
 
 ## Usage
-### Create an Atea object.
+### Create an Atea object
 `Atea atea = new Atea("host_address", "username", "password");`
 
 ### Training ATEA
