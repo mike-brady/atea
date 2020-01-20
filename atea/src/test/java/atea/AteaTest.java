@@ -24,7 +24,7 @@ class AteaTest {
     void init() {
         try {
             Properties properties = new Properties();
-            properties.load(this.getClass().getClassLoader().getResourceAsStream("test.properties"));
+            properties.load(this.getClass().getClassLoader().getResourceAsStream("db.properties"));
             String host = properties.getProperty("host");
             String username = properties.getProperty("username");
             String password = properties.getProperty("password");
