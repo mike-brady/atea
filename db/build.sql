@@ -30,7 +30,6 @@ DROP TABLE IF EXISTS `abbreviations`;
 CREATE TABLE `abbreviations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `value` varchar(12) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `is_always_abbreviation` BOOLEAN NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `value` (`value`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

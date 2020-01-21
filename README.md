@@ -8,20 +8,32 @@ ATEA stands for Abbreviated Text Expansion Algorithm. ATEA parses text, finds wh
 
 #### Docker
 
-1. Make a copy [.db.env.template](db/.db.env.template) and name it ".db.env"
-2. Fill out .db.env with a root passsord, username, and user password.  
-3. Build and run the Dockerfile.  
+1. Make a copy [.db.env.template](db/.db.env.template) and name it ".db.env".
+2. Fill out .db.env with a root password, username, and user password.
+3. Choose the data you want ATEA to start with.  
+-- To start ATEA using its pretrained list of abbreviations, no actions are needed in this step. Go to step 4.  
+-- To start ATEA with a blank slate (not knowing of any abbreviations), comment out the following lines in the [Dockerfile](db/Dockerfile).  
+`COPY abbreviations.sql /docker-entrypoint-initdb.d/3_abbreviations.sql`  
+`COPY examples.sql /docker-entrypoint-initdb.d/4_examples.sql`  
+-- To start ATEA with a custom set of abbreviations, edit [abbreviations.sql](db/abbreviations.sql) and comment out the following line in the [Dockerfile](db/Dockerfile).  
+`COPY examples.sql /docker-entrypoint-initdb.d/4_examples.sql`
+4. Build and run the Dockerfile.  
 `docker build . -t atea_db`  
 `docker run --env-file .db.env --name atea_db -p 3306:3306 -d atea_db:latest`
 
 #### Manually
 
-1. Run [build.sql](db/build.sql) in MySQL
-2. Create a user with SELECT and INSERT permissions on the database "atea"
+1. Run [build.sql](db/build.sql) in MySQL.
+2. Run [words.sql](db/words.sql) in MySQL.
+3. Choose the data you want ATEA to start with.  
+-- To start ATEA using its pretrained list of abbreviations, run [abbreviations.sql](db/abbreviations.sql) and [examples.sql](db/examples.sql) in MySQL.  
+-- To start ATEA with a blank slate (not knowing of any abbreviations), no actions are needed in this step. Go to step 4.  
+-- To start ATEA with a custom set of abbreviations, edit [abbreviations.sql](db/abbreviations.sql) then run it in MySQL.
+4. Create a user with SELECT and INSERT permissions on the database "atea".
 
 ### Give ATEA your database credentials
 
-1. Make a copy [db.properties.template](atea/target/classes/db.properties.template) and name it ".db.properties"
+1. Make a copy [db.properties.template](atea/target/classes/db.properties.template) and name it ".db.properties".
 2. Fill out db.properties with the hostname, username, and user password for the database.
 
 ## Usage
