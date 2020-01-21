@@ -33,7 +33,7 @@ ATEA stands for Abbreviated Text Expansion Algorithm. ATEA parses text, finds wh
 
 ### Give ATEA your database credentials
 
-1. Make a copy [db.properties.template](atea/target/classes/db.properties.template) and name it ".db.properties".
+1. Make a copy [db.properties.template](atea/target/classes/db.properties.template) and name it "db.properties".
 2. Fill out db.properties with the hostname, username, and user password for the database.
 
 ## Usage
