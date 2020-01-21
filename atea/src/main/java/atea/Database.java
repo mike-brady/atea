@@ -141,6 +141,37 @@ final class Database {
         return result;
     }
 
+    boolean isCommonWord(String word) throws  SQLException {
+        Connection conn = connect();
+
+        String query = "SELECT id FROM words WHERE value=?";
+        PreparedStatement stmt = conn.prepareStatement(query);
+        stmt.setString(1, word);
+        boolean result = stmt.execute();
+
+        conn.close();
+
+        return result;
+    }
+
+    String[] getCommonWords() throws SQLException {
+        ArrayList<String> words = new ArrayList<>();
+
+        Connection conn = connect();
+
+        String query = "SELECT value FROM common_words";
+        PreparedStatement stmt = conn.prepareStatement(query);
+        ResultSet rset = stmt.executeQuery();
+        while(rset.next()) {
+            words.add(
+                    rset.getString("value")
+            );
+        }
+        conn.close();
+
+        return words.toArray( new String[words.size()] );
+    }
+
     /**
      * Gets all expansions and creates Expansion objects for a given abbreviation.
      * @param abbr_id   The id of the abbreviation to get expansions for.

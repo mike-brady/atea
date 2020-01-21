@@ -66,12 +66,11 @@ CREATE TABLE `expansions` (
 -- Table structure for table `words`
 --
 
-DROP TABLE IF EXISTS `words`;
-CREATE TABLE `words` (
+DROP TABLE IF EXISTS `commmon_words`;
+CREATE TABLE `common_words` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `value` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `value` (`value`)
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
 
 --

@@ -15,10 +15,11 @@ import java.util.Arrays;
 public final class Atea {
 
   private final Database db;
-  private int context_width = 8;
+  private final String[] commonWords;
 
   public Atea(String host, String username, String password) throws SQLException {
     this.db = new Database(host, username, password);
+    commonWords = db.getCommonWords();
   }
 
   public ArrayList<Abbreviation> findPotentialAbbreviations(String text) {
@@ -240,11 +241,25 @@ public final class Atea {
 
   }
 
+  private boolean isKeyword(String word) {
+    word = word.toLowerCase();
+
+    // If word is found in commonWords, it is not a keyword.
+    for(int i=0; i<commonWords.length; i++) {
+      if(commonWords[i].toLowerCase() == word) {
+        return false;
+      }
+    }
+
+    // Else, it is a keyword.
+    return true;
+  }
+
   private float getKeywordScore(Abbreviation abbr, Expansion expansion) {
     String[] words = abbr.getText().getWords();
     float keywordTotalScore = 0;
     for(int i=0; i<words.length; i++) {
-      if(i == abbr.getIndex()) {
+      if(i == abbr.getIndex() || !isKeyword(words[i])) {
         continue;
       }
       float thisKeywordScore;
