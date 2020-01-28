@@ -216,7 +216,7 @@ public final class Atea {
    * @param abbr  An Abbreviation object to predict expansions for.
    * @return      An ArrayList of Expansion objects
    */
-  private ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
+  ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
     ArrayList<Expansion> expansions = new ArrayList<>();
 
     try {
@@ -269,7 +269,7 @@ public final class Atea {
    * @return          The weighted scores
    * @throws NumberFormatException
    */
-  private double[] weightScores(double[] scores, double[] weights) throws NumberFormatException {
+  double[] weightScores(double[] scores, double[] weights) throws NumberFormatException {
     if(scores.length != weights.length) {
       throw new NumberFormatException("Length of scores and weights do not match.");
     }
