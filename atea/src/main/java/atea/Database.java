@@ -375,7 +375,9 @@ final class Database {
     public boolean insertExample(Abbreviation abbr, String expansion) throws SQLException {
         Connection conn = connect();
 
-        String abbreviation = abbr.getText().getWords()[abbr.getIndex()];
+        // TODO - Remove the commented line below
+        // String abbreviation = abbr.getText().getWords()[abbr.getIndex()];
+        String abbreviation = abbr.getValue();
         int abbr_id = abbreviationExists(abbreviation);
         if(abbr_id == -1) {
             abbr_id = insertAbbreviation(abbreviation, conn);

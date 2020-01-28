@@ -17,11 +17,25 @@ public final class Atea {
   private final Database db;
   private final String[] commonWords;
 
+  /**
+   *
+   * @param host        The hostname of the database
+   * @param username    The username of the database user
+   * @param password    The password of the database user
+   * @throws SQLException
+   */
   public Atea(String host, String username, String password) throws SQLException {
     this.db = new Database(host, username, password);
     commonWords = db.getCommonWords();
   }
 
+  /**
+   * Finds all words in a String of text whose characters match an abbreviation in the database.
+   * The returned items may or may not actually be abbreviations. This method makes no predictions
+   * on whether the words are being used as abbreviations or not in the text.
+   * @param text      The text to look for potential abbreviations in
+   * @return          An ArrayList of Abbreviation objects whose expansions property is empty
+   */
   public ArrayList<Abbreviation> findPotentialAbbreviations(String text) {
     ArrayList<Abbreviation> abbrs = new ArrayList<>();
     SplitString ss = new SplitString(text);
@@ -45,6 +59,12 @@ public final class Atea {
     return abbrs;
   }
 
+  /**
+   * Finds all words in a String of text that ATEA believes to be an abbreviation.
+   * @param text      The text to look for potential abbreviations in
+   * @return          An ArrayList of Abbreviation objects whose expansions property contains a list
+   *                  of Expansion objects sorted from most likely to least likely expansion
+   */
   public ArrayList<Abbreviation> predictAbbreviations(String text) {
     ArrayList<Abbreviation> potentialAbbrs = findPotentialAbbreviations(text);
     ArrayList<Abbreviation> abbrs = new ArrayList<>();
@@ -63,8 +83,18 @@ public final class Atea {
     return abbrs;
   }
 
+  /**
+   * Adds an example of an abbreviation being used to the database. This method also accepts examples
+   * of when an abbreviation is NOT being used as an abbreviation. Example: "it" could stand for
+   * "information technology" or could be the word "it" (It is sunny.)
+   * @param abbr        An Abbreviation object with its value property set to the abbreviation
+   * @param expansion   An Expansion object with its value property set to what the abbreviation stands
+   *                    for. For an example when a word is not an abbreviation set the Expansion object's
+   *                    FILL IN HERE property to FILL IN HERE
+   * @return            true on success, false on failure
+   */
+  // TODO - How to pass not expansion example. Should expansion object have id set to -1, value to ''?
   public boolean addExample(Abbreviation abbr, Expansion expansion) {
-    String wordsCSV = abbr.getText().getWordsAsCSV();
     try {
       db.insertExample(abbr, expansion.getValue());
     }
@@ -77,7 +107,8 @@ public final class Atea {
   }
 
   /**
-   * Returns the text with the most likely expansion for each abbreviation substituted for the abbreviation.
+   * Returns the text with the most likely expansion for each abbreviation substituted for the
+   * abbreviation.
    * @param  text The text to look for abbreviations in.
    * @return      The expanded text.
    */
@@ -90,7 +121,8 @@ public final class Atea {
   }
 
   /**
-   * Returns the text with the most likely expansion for each abbreviation put in parenthesis next to the abbreviation.
+   * Returns the text with the most likely expansion for each abbreviation put in parenthesis next to
+   * the abbreviation.
    * @param  text The text to look for abbreviations in.
    * @return      The explained text.
    */
@@ -105,7 +137,8 @@ public final class Atea {
   /**
    * Returns buildString(String[] chunks, ArrayList<Abbreviation> abbrs, boolean explain)
    * passing false for the explain parameter.
-   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word, delimiter, word, ...)
+   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word,
+   *                delimiter, word, ...)
    *                Expects the array to always start with and end with a delimiter.
    * @param abbrs   The Abbreviation objects found in the String[] chunks.
    * @return        The built string.
@@ -115,17 +148,20 @@ public final class Atea {
   }
 
   /**
-   * Builds a String from a String[]. Expects every even element to be a delimiter and every odd element to be a word.
-   * Abbreviations passed in the ArrayList should have their index property set to correspond with their index in the
-   * set of only words. Given String[] chunks = {"", "An", " ", "abbr", " ", "example", "."}, the Abbreviation abbr has
-   * the index 3 in chunks, however in the set of only words ( {"An", "abbr"} ), abbr has the index 1.
-   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word, delimiter, word, ...)
+   * Builds a String from a String[]. Expects every even element to be a delimiter and every odd element
+   * to be a word. Abbreviations passed in the ArrayList should have their index property set to
+   * correspond with their index in the set of only words. Given String[] chunks = {"", "An", " ",
+   * "abbr", " ", "example", "."}, the Abbreviation abbr has the index 3 in chunks, however in the set
+   * of only words ( {"An", "abbr"} ), abbr has the index 1.
+   * @param chunks  An ordered array of Strings where the sequence of elements is(delimiter, word,
+   *                delimiter, word, ...)
    *                Expects the array to always start with and end with a delimiter.
    * @param abbrs   The Abbreviation objects found in the String[] chunks.
    * @param explain On true, will output the expansion of the abbreviation in parenthesis next to the abbreviation.
    *                On false, will substitute the expansion for the abbreviation.
    * @return        The built string.
    */
+  // TODO - Should this be removed and replaced with a SplitString method?
   private String buildString(String[] chunks, ArrayList<Abbreviation> abbrs, boolean explain) {
     StringBuilder output = new StringBuilder();
 
@@ -175,7 +211,12 @@ public final class Atea {
     return indexes;
   }
 
-  ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
+  /**
+   * Predicts what an Abbreviation might stand for.
+   * @param abbr  An Abbreviation object to predict expansions for.
+   * @return      An ArrayList of Expansion objects
+   */
+  private ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
     ArrayList<Expansion> expansions = new ArrayList<>();
 
     try {
@@ -214,7 +255,21 @@ public final class Atea {
     return expansions;
   }
 
-  double[] weightScores(double[] scores, double[] weights) throws NumberFormatException {
+  /**
+   * Adjust scores according to given weights. Weighted scores will sum to the same total as
+   * the original scores.
+   * Example:     Scores    Weights     Weighted Scores
+   *               .21      360          .603...
+   *               .64      61           .311...
+   *               .15      72           .086...
+   *      TOTAL:  1.00                  1.00
+   *
+   * @param scores    The scores to be weighted
+   * @param weights   The weights to apply to the scores
+   * @return          The weighted scores
+   * @throws NumberFormatException
+   */
+  private double[] weightScores(double[] scores, double[] weights) throws NumberFormatException {
     if(scores.length != weights.length) {
       throw new NumberFormatException("Length of scores and weights do not match.");
     }
@@ -241,6 +296,12 @@ public final class Atea {
 
   }
 
+  /**
+   * Determines if a word is a keyword. To be considered a keyword it must not be found in the
+   * commonWords array, which contains the n-most commonly used words in the English language.
+   * @param word     The word to check
+   * @return         True if the word is a keyword, False otherwise
+   */
   private boolean isKeyword(String word) {
     word = word.toLowerCase();
 
@@ -255,6 +316,13 @@ public final class Atea {
     return true;
   }
 
+  /**
+   * Scores an abbreviation/expansion combo based on the number of keywords used within the context
+   * of this abbreviation that match keywords found in examples in ATEA's database.
+   * @param abbr        The abbreviation to get a keyword score for
+   * @param expansion   The expansion to get a keyword score for
+   * @return
+   */
   private float getKeywordScore(Abbreviation abbr, Expansion expansion) {
     String[] words = abbr.getText().getWords();
     float keywordTotalScore = 0;
@@ -265,6 +333,8 @@ public final class Atea {
       float thisKeywordScore;
       try {
         thisKeywordScore = db.getExpansionKeywordScore(abbr.getId(), expansion.getId(), words[i]);
+        // TODO - split this into multiple db method calls to the math/logic is happening inside
+        // this class instead of inside the db class
       }
       catch(SQLException ex) {
         ex.printStackTrace();
