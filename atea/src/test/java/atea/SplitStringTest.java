@@ -143,21 +143,6 @@ class SplitStringTest {
     }
 
 
-    @Nested
-    @DisplayName("compose method should return a string of a combined a String[]")
-    class composeTest {
-        @Test
-        @DisplayName("when two String[]'s are passed")
-        void compose_ShouldReturnStringWhenTwoStringArraysArePassed() {
-            assertEquals(input_wn, ss_wn.compose());
-        }
-
-        @Test
-        @DisplayName("when one String[] is passed")
-        void compose_ShouldReturnStringWhenOneStringArrayIsPassed() {
-            assertEquals(input_wn, ss_wn.compose());
-        }
-    }
 
 //    @DisplayName("getContext method should return a Context object")
 //    @Test
