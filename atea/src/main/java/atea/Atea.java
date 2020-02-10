@@ -19,14 +19,16 @@ public final class Atea {
 
   /**
    *
-   * @param host        The hostname of the database
-   * @param username    The username of the database user
-   * @param password    The password of the database user
+   * @param db        A Database object
    * @throws SQLException
    */
-  public Atea(String host, String username, String password) throws SQLException {
-    this.db = new Database(host, username, password);
-    commonWords = db.getCommonWords();
+  public Atea(Database db) throws SQLException {
+    this.db = db;
+
+    String[] words = null;
+    words = db.getCommonWords();
+
+    commonWords = words;
   }
 
   /**
@@ -36,23 +38,18 @@ public final class Atea {
    * @param text      The text to look for potential abbreviations in
    * @return          An ArrayList of Abbreviation objects whose expansions property is empty
    */
-  public ArrayList<Abbreviation> findPotentialAbbreviations(String text) {
+  public ArrayList<Abbreviation> findPotentialAbbreviations(String text) throws SQLException {
     ArrayList<Abbreviation> abbrs = new ArrayList<>();
     SplitString ss = new SplitString(text);
 
     String[] words = ss.getWords();
     for(int i=0; i<words.length; i++) {
 
-      try {
-        int id = db.abbreviationExists(words[i]);
-        if(id != -1 ) {
-          abbrs.add(new Abbreviation(id, words[i], ss, i));
-        }
+      int id = db.abbreviationExists(words[i]);
+      if(id != -1 ) {
+        abbrs.add(new Abbreviation(id, words[i], ss, i));
       }
-      catch(SQLException ex) {
-        ex.printStackTrace();
-        return new ArrayList<>();
-      }
+
     }
 
     Collections.sort(abbrs);
@@ -65,7 +62,7 @@ public final class Atea {
    * @return          An ArrayList of Abbreviation objects whose expansions property contains a list
    *                  of Expansion objects sorted from most likely to least likely expansion
    */
-  public ArrayList<Abbreviation> predictAbbreviations(String text) {
+  public ArrayList<Abbreviation> predictAbbreviations(String text) throws SQLException {
     ArrayList<Abbreviation> potentialAbbrs = findPotentialAbbreviations(text);
     ArrayList<Abbreviation> abbrs = new ArrayList<>();
 
@@ -112,7 +109,7 @@ public final class Atea {
    * @param  text The text to look for abbreviations in.
    * @return      The expanded text.
    */
-  public String expand(String text) {
+  public String expand(String text) throws SQLException {
     ArrayList<Abbreviation> abbrs = predictAbbreviations(text);
     SplitString ss = new SplitString(text);
     String[] chunks = ss.getFullSplit();
@@ -126,7 +123,7 @@ public final class Atea {
    * @param  text The text to look for abbreviations in.
    * @return      The explained text.
    */
-  public String explain(String text) {
+  public String explain(String text) throws SQLException {
     ArrayList<Abbreviation> abbrs = predictAbbreviations(text);
     SplitString ss = new SplitString(text);
     String[] chunks = ss.getFullSplit();
@@ -216,40 +213,28 @@ public final class Atea {
    * @param abbr  An Abbreviation object to predict expansions for.
    * @return      An ArrayList of Expansion objects
    */
-  ArrayList<Expansion> predictExpansions(Abbreviation abbr) {
+  private ArrayList<Expansion> predictExpansions(Abbreviation abbr) throws SQLException {
     ArrayList<Expansion> expansions = new ArrayList<>();
 
-    try {
-      int abbr_id = abbr.getId();
-      if(abbr_id != -1) {
-        expansions = db.getExpansions(abbr_id);
-        expansions.add(new Expansion(-1, ""));
+    int abbr_id = abbr.getId();
+    if(abbr_id != -1) {
+      expansions = db.getExpansions(abbr_id);
+      expansions.add(new Expansion(-1, ""));
 
-        double totalKeywordScore = 0;
-        double[] scores = new double[expansions.size()];
-        double[] weights = new double[expansions.size()];
-        int i=0;
-        for( Expansion expansion : expansions) {
-          try {
-            scores[i] = db.getExpansionBaseProbability(abbr_id, expansion.getId());
-            weights[i] = getKeywordScore(abbr, expansion);
-            i++;
-          }
-          catch(SQLException ex) {
-            ex.printStackTrace();
-            return new ArrayList<>();
-          }
-        }
-
-        double[] weightedScores = weightScores(scores, weights);
-        for(i=0; i<expansions.size(); i++) {
-          expansions.get(i).setConfidence(weightedScores[i]);
-        }
+      double totalKeywordScore = 0;
+      double[] scores = new double[expansions.size()];
+      double[] weights = new double[expansions.size()];
+      int i=0;
+      for( Expansion expansion : expansions) {
+        scores[i] = db.getExpansionBaseProbability(abbr_id, expansion.getId());
+        weights[i] = getKeywordScore(abbr, expansion);
+        i++;
       }
-    }
-    catch(SQLException ex) {
-      ex.printStackTrace();
-      return new ArrayList<>();
+
+      double[] weightedScores = weightScores(scores, weights);
+      for(i=0; i<expansions.size(); i++) {
+        expansions.get(i).setConfidence(weightedScores[i]);
+      }
     }
 
     return expansions;
