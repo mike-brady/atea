@@ -15,7 +15,7 @@ import java.util.Arrays;
 public final class Atea {
 
   private final Database db;
-  private final String[] commonWords;
+  private String[] commonWords;
 
   /**
    *
@@ -24,7 +24,15 @@ public final class Atea {
    */
   public Atea(Database db) throws SQLException {
     this.db = db;
+    construct();
+  }
 
+  public Atea(String host, String username, String password) throws SQLException {
+    this.db = new Database(host, username, password);
+    construct();
+  }
+
+  private void construct() throws SQLException {
     String[] words = null;
     words = db.getCommonWords();
 
