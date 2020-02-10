@@ -1,6 +1,8 @@
 package atea;
 
 import org.junit.jupiter.api.*;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -12,6 +14,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("When running Atea")
 class AteaTest {
 
+    @Mock
+    private Database db = Mockito.mock(Database.class);
+
     private Atea atea;
     private String input;
     private SplitString ss;
@@ -21,19 +26,27 @@ class AteaTest {
     private String expected_explain;
 
     @BeforeEach
-    void init() {
-        try {
-            Properties properties = new Properties();
-            properties.load(this.getClass().getClassLoader().getResourceAsStream("db.properties"));
-            String host = properties.getProperty("host");
-            String username = properties.getProperty("username");
-            String password = properties.getProperty("password");
-            atea = new Atea(host, username, password);
-        } catch(SQLException | IOException ex) {
-            ex.printStackTrace();
-            fail("Could not connect to database;");
-        }
+    void init() throws SQLException {
+        Mockito.when(db.getCommonWords()).thenReturn(new String[] {"a","form","of","word","and"});
 
+        Mockito.when(db.abbreviationExists(Mockito.anyString())).thenReturn(-1);
+        Mockito.when(db.abbreviationExists("abbr")).thenReturn(1);
+        Mockito.when(db.abbreviationExists("DIY")).thenReturn(2);
+        Mockito.when(db.abbreviationExists("misc")).thenReturn(3);
+
+        Mockito.when(db.getExpansions(Mockito.anyInt())).thenReturn(new ArrayList<Expansion>());
+        ArrayList<Expansion> expansions = new ArrayList<>();
+        expansions.add(new Expansion(1, "abbreviation"));
+        Mockito.when(db.getExpansions(1)).thenReturn(new ArrayList<Expansion>(expansions));
+        expansions = new ArrayList<>();
+        expansions.add(new Expansion(2, "do it yourself"));
+        Mockito.when(db.getExpansions(2)).thenReturn(new ArrayList<Expansion>(expansions));
+        expansions = new ArrayList<>();
+        expansions.add(new Expansion(3, "miscellaneous"));
+        Mockito.when(db.getExpansions(3)).thenReturn(new ArrayList<Expansion>(expansions));
+        Mockito.when(db.getExpansionBaseProbability(Mockito.anyInt(), Mockito.anyInt())).thenReturn(-1f);
+
+        atea = new Atea(db);
         input = "An abbr is a shortened form of a word. DIY and misc are examples of abbreviations.";
         ss = new SplitString(input);
         input_array = new String[]{"An", "abbr", "is", "a", "shortened", "form", "of", "a", "word.", "DIY", "and", "misc", "are", "examples", "of", "abbreviations."};
@@ -44,58 +57,48 @@ class AteaTest {
     
     @Test
     @DisplayName("findPotentialAbbreviations method should return an ArrayList of Abbreviation objects without expansions")
-    void findPotentialAbbreviationsTest() {
+    void findPotentialAbbreviationsTest() throws SQLException {
         ArrayList<Abbreviation> expected = new ArrayList<>();
         expected.add(new Abbreviation(1, "abbr", ss, 1));
-        expected.add(new Abbreviation(7, "DIY", ss, 9));
-        expected.add(new Abbreviation(17, "misc", ss, 11));
+        expected.add(new Abbreviation(2, "DIY", ss, 9));
+        expected.add(new Abbreviation(3, "misc", ss, 11));
         
         assertEquals(expected, atea.findPotentialAbbreviations(input));
     }
 
     @Test
     @DisplayName(("predictAbbreviations method should return an ArrayList of Abbreviation objects with expansions"))
-    void predictAbbreviationsTest() {
+    void predictAbbreviationsTest() throws SQLException {
         ArrayList<Abbreviation> expected = new ArrayList<>();
 
         ArrayList<Expansion> expansions = new ArrayList<>();
-        expansions.add(new Expansion(1, "abbreviation", 1));
+        expansions.add(new Expansion(1, "abbreviation"));
         expansions.add(new Expansion(-1, ""));
         expected.add(new Abbreviation(1, "abbr", ss, 1, expansions));
 
         expansions = new ArrayList<>();
-        expansions.add(new Expansion(7, "do it yourself", 1));
+        expansions.add(new Expansion(2, "do it yourself"));
         expansions.add(new Expansion(-1, ""));
-        expected.add(new Abbreviation(7, "DIY", ss, 9, expansions));
+        expected.add(new Abbreviation(2, "DIY", ss, 9, expansions));
 
         expansions = new ArrayList<>();
-        expansions.add(new Expansion(17, "miscellaneous", 1));
+        expansions.add(new Expansion(3, "miscellaneous"));
         expansions.add(new Expansion(-1, ""));
-        expected.add(new Abbreviation(17, "misc", ss, 11, expansions));
+        expected.add(new Abbreviation(3, "misc", ss, 11, expansions));
 
         assertEquals(expected, atea.predictAbbreviations(input));
     }
 
     @Test
     @DisplayName("expand method should return the input string with the abbreviations expanded")
-    void expandTest() {
+    void expandTest() throws SQLException {
         assertEquals(expected_expand, atea.expand(input));
     }
 
     @Test
     @DisplayName("explain method should return the input string with the expansions in parenthesis after the abbreviations")
-    void explainTest() {
+    void explainTest() throws SQLException {
         assertEquals(expected_explain, atea.explain(input));
-    }
-
-    @Test
-    @DisplayName("predictExpansions method should return an ArrayList of Expansion objects")
-    void predictExpansionsTest() {
-        ArrayList<Expansion> expected = new ArrayList<Expansion>();
-        expected.add(new Expansion(1, "abbreviation", 1));
-        expected.add(new Expansion(-1, ""));
-        Abbreviation abbr = new Abbreviation(1, "abbr", ss, 1);
-        assertEquals(expected, atea.predictExpansions(abbr));
     }
 
     @Test
