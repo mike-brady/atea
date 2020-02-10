@@ -29,10 +29,11 @@ CREATE TABLE `abbreviation_expansion` (
 DROP TABLE IF EXISTS `abbreviations`;
 CREATE TABLE `abbreviations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `value` varchar(12) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value` varchar(12) COLLATE utf8mb4_unicode_ci,
   PRIMARY KEY (`id`),
   UNIQUE KEY `value` (`value`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `abbreviations` (value) VALUES (NULL);
 
 --
 -- Table structure for table `context`
