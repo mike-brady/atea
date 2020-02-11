@@ -106,7 +106,6 @@ class Database {
             stmt.setString(nextParameterIndex++, whereValues[i]);
         }
 
-        System.out.println(stmt);
         ResultSet rset = stmt.executeQuery();
 
         return rset;
@@ -253,7 +252,6 @@ class Database {
         Connection conn = connect();
 
         try {
-            // TODO: FIX THIS METHOD
             String query = "SELECT id, value FROM expansions JOIN abbreviation_expansion ON expansions.id=abbreviation_expansion.expansion_id WHERE abbreviation_expansion.abbreviation_id =?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setInt(1, abbr_id);
