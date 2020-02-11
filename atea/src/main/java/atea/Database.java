@@ -25,37 +25,64 @@ class Database {
         return conn;
     }
 
-    private ResultSet select(String table) throws SQLException {
-        return select(table, new String[] {"*"}, new String[0], new String[0]);
+    private boolean validTable(String table) throws SQLException {
+        Boolean found = false;
+
+        Connection conn = connect();
+        String query = "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'atea' AND table_name = ?;";
+
+        PreparedStatement stmt = conn.prepareStatement(query);
+        stmt.setString(1, table);
+
+        ResultSet rset = stmt.executeQuery();
+        float probability = -1;
+        if(rset.first()) {
+            if(rset.getInt(1) > 0)
+                found = true;
+        }
+
+        conn.close();
+
+        return found;
     }
 
-    private ResultSet select(String table, String[] columns) throws SQLException {
-        return select(table, columns, new String[0], new String[0]);
+    private ResultSet select(Connection conn, String table) throws SQLException {
+        return select(conn, table, new String[0], new String[0], new String[0]);
     }
 
-    private ResultSet select(String table, String[] whereColumns, String[] whereValues) throws SQLException {
-        return select(table, new String[] {"*"}, whereColumns, whereValues);
+    private ResultSet select(Connection conn, String table, String[] columns) throws SQLException {
+        return select(conn, table, columns, new String[0], new String[0]);
     }
 
-    private ResultSet select(String table, String[] columns, String[] whereColumns, String[] whereValues) throws SQLException {
+    private ResultSet select(Connection conn, String table, String[] whereColumns, String[] whereValues) throws SQLException {
+        return select(conn, table, new String[0], whereColumns, whereValues);
+    }
+
+    private ResultSet select(Connection conn, String table, String[] columns, String[] whereColumns, String[] whereValues) throws SQLException {
         if(whereColumns.length != whereValues.length) {
             throw new ArrayIndexOutOfBoundsException("whereColumns and whereValues length do not match");
         }
 
-        Connection conn = connect();
+        if(!validTable(table)) {
+            throw new SQLException("Table '" + table + "' does not exist.");
+        }
 
         String query = "SELECT";
 
         // columns
-        for(int i=0; i<columns.length; i++) {
-            if(i>0) {
-                query += ", ";
+        if(columns.length == 0) {
+            query += " *";
+        } else {
+            for (int i = 0; i < columns.length; i++) {
+                if (i > 0) {
+                    query += ", ";
+                }
+                query += " ?";
             }
-            query += " ?";
         }
 
         // FROM table
-        query += "FROM ?";
+        query += " FROM " + table;
 
         // WHERE column=value AND column=value ...
         for(int i=0; i<whereColumns.length; i++) {
@@ -73,18 +100,14 @@ class Database {
             stmt.setString(nextParameterIndex++, columns[i]);
         }
 
-        // table
-        stmt.setString(nextParameterIndex++, table);
-
         // where clauses
         for(int i=0; i<whereColumns.length; i++) {
             stmt.setString(nextParameterIndex++, whereColumns[i]);
             stmt.setString(nextParameterIndex++, whereValues[i]);
         }
 
+        System.out.println(stmt);
         ResultSet rset = stmt.executeQuery();
-
-        conn.close();
 
         return rset;
     }
@@ -144,16 +167,24 @@ class Database {
     }
 
     private int getRowId(String table, String column, String value) throws SQLException {
-        ResultSet rset = select(table, new String[] {column}, new String[] {value});
+        Connection conn = connect();
+        int id = -1;
+        ResultSet rset = select(conn, table, new String[] {column}, new String[] {value});
         if(rset.first()) {
-            return rset.getInt("id");
+            id = rset.getInt("id");
         }
 
-        return -1;
+        conn.close();
+
+        return id;
     }
 
     private boolean rowExists(String table, String column, String value) throws SQLException {
-        return select(table, new String[] {column}, new String[] {value}).first();
+        Connection conn = connect();
+        Boolean exists = select(conn, table, new String[] {column}, new String[] {value}).first();
+        conn.close();
+
+        return exists;
     }
 
     /**
@@ -182,25 +213,32 @@ class Database {
     }
 
     private boolean isExpansionFor(int expansion_id, int abbr_id) throws SQLException {
+        Connection conn = connect();
         ResultSet rset = select(
+                conn,
                 "abbreviation_expansion",
                 new String[] {"abbreviation_id"},
                 new String[] {"abbreviation_id", "expansion_id"},
                 new String[] {Integer.toString(abbr_id), Integer.toString(expansion_id)}
                 );
 
-        return rset.first();
+        boolean result = rset.first();
+        conn.close();
+
+        return result;
     }
 
     String[] getCommonWords() throws SQLException {
         ArrayList<String> words = new ArrayList<>();
 
-        ResultSet rset = select("common_words");
+        Connection conn = connect();
+        ResultSet rset = select(conn, "common_words");
         while (rset.next()) {
             words.add(
                     rset.getString("value")
             );
         }
+        conn.close();
 
         return words.toArray( new String[words.size()] );
     }
